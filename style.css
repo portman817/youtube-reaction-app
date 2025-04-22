@@ -1,0 +1,62 @@
+body {
+    margin: 0;
+    font-family: sans-serif;
+    background-color: #2e2e2e;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    outline: none;
+    
+    
+  }
+  
+  #top-bar {
+    display: flex;
+    flex-direction: row;
+    background-color: #3a3a3a;
+    padding: 10px;
+    height: 200px;
+    box-sizing: border-box;
+  }
+  
+  #links, #script {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    color: white;
+  }
+  
+  #links {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    border-right: 1px solid #555;
+    color: white;
+    font-size: 14px;
+  }
+  
+  
+  #player {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: black;
+  }
+  #url-input {
+    background-color: #3a3a3a;
+    padding: 10px;
+  }
+  
+  #url-input input {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    box-sizing: border-box;
+  }
+  
+  
