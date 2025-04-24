@@ -41,17 +41,6 @@ App starten:
 
     npm start
 
-      Projektstruktur:
-      
-reaction-app/
-├── backend/
-│   └── db.js             // SQLite-Verwaltung
-├── preload.js           // IPC Bridge für Renderer
-├── main.js              // Electron Main Process
-├── renderer.js          // Renderer-Logik (Frontend)
-├── index.html
-├── style.css
-└── bookmarks.db         // SQLite Datenbank
 
 
 
