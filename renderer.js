@@ -1,38 +1,63 @@
 let bookmarks = {};
 let ytPlayer = null;
 let ytPlayerReady = false;
+
 const labelMap = {
-  Digit1: '1',
-  Digit2: '2',
-  Digit3: '3',
-  Digit4: '4',
-  Digit5: '5',
-  Digit6: '6',
-  Digit7: '7',
-  Digit8: '8',
-  Digit9: '9'
+  Digit1: '1', Digit2: '2', Digit3: '3',
+  Digit4: '4', Digit5: '5', Digit6: '6',
+  Digit7: '7', Digit8: '8', Digit9: '9'
 };
 
 function onYouTubeIframeAPIReady() {
-  // Diese Methode wird von der YouTube API aufgerufen und muss global verfügbar sein
   console.log('📡 YouTube API geladen');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('video-url');
   const linksContainer = document.getElementById('links');
+  const scriptContainer = document.getElementById('script');
   const playerContainer = document.getElementById('player');
 
-  // Lese gespeicherte Bookmarks aus der Datenbank
-  window.electronAPI.loadBookmarks().then((entries) => {
-    entries.forEach(entry => {
-      bookmarks[entry.key] = { time: entry.time, url: entry.url };
-      updateBookmarkUI(entry.key, { time: entry.time, url: entry.url });
-    });
-    console.log('Bookmarks aus Datenbank geladen');
+  // Заметки (textarea)
+  let noteArea = scriptContainer.querySelector('textarea');
+  if (!noteArea) {
+    noteArea = document.createElement('textarea');
+    noteArea.placeholder = 'Notizen hier schreiben...';
+    noteArea.style.width = '100%';
+    noteArea.style.height = '180px';
+    noteArea.style.boxSizing = 'border-box';
+    noteArea.style.backgroundColor = '#2e2e2e';
+    noteArea.style.color = 'white';
+    noteArea.style.border = 'none';
+    noteArea.style.resize = 'none';
+    noteArea.style.fontSize = '14px';
+    noteArea.style.paddingTop = '0px';
+    noteArea.style.verticalAlign = 'top'; 
+    noteArea.style.textAlign = 'left';
+    noteArea.style.overflowY = 'auto';
+    noteArea.style.lineHeight = '1.4';
+    noteArea.style.padding = '8px'; 
+
+    scriptContainer.appendChild(noteArea);
+  }
+
+  window.electronAPI.loadNotes().then(content => {
+    noteArea.value = content || '';
   });
 
-  // YouTube IFrame API laden
+  noteArea.addEventListener('input', () => {
+    window.electronAPI.saveNotes(noteArea.value);
+  });
+
+  // Bookmarks aus der DB laden
+  window.electronAPI.loadBookmarks().then((entries) => {
+    entries.forEach(entry => {
+      bookmarks[entry.key] = { time: entry.time, url: entry.url, title: entry.title };
+      updateBookmarkUI(entry.key, { time: entry.time, url: entry.url, title: entry.title });
+    });
+    console.log('Bookmarks geladen');
+  });
+
   const tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
   document.body.appendChild(tag);
@@ -44,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
         bookmarks = {};
         linksContainer.innerHTML = '';
         window.electronAPI.clearBookmarks();
-        console.log('🧹 Alle Bookmarks gelöscht');
         alert('Alle Bookmarks wurden gelöscht.');
         input.value = '';
         return;
@@ -56,8 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Ungültige YouTube-URL.');
         return;
       }
-
-      console.log(`🎥 Video wird geladen: ID = ${videoId}`);
 
       const div = document.createElement('div');
       div.id = 'ytplayer';
@@ -72,31 +94,23 @@ document.addEventListener('DOMContentLoaded', () => {
         events: {
           onReady: () => {
             ytPlayerReady = true;
-            console.log('ytPlayer ist bereit');
+            console.log('✅ ytPlayer bereit');
           },
           onStateChange: (event) => {
             if (event.data === YT.PlayerState.PLAYING) {
-              setTimeout(() => {
-                document.body.focus();
-                console.log('🎬 Wiedergabe gestartet → Fokus zurück auf body');
-              }, 100);
+              setTimeout(() => document.body.focus(), 100);
             }
           }
         }
       });
 
-      setTimeout(() => {
-        document.body.focus();
-        console.log('Fokus auf body nach Enter gesetzt');
-      }, 100);
+      setTimeout(() => document.body.focus(), 100);
     }
   });
 
-  // Tastenkürzel-Logik
   document.addEventListener('keydown', (event) => {
     const active = document.activeElement;
     const tag = active.tagName;
-
     if (tag === 'INPUT' || tag === 'TEXTAREA' || active.isContentEditable) return;
     if (active !== document.body) document.body.focus();
 
@@ -105,38 +119,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (code === 'Space') {
       event.preventDefault();
-      if (!ytPlayer || !ytPlayer.getPlayerState) return;
-
-      const state = ytPlayer.getPlayerState();
-      switch (state) {
-        case YT.PlayerState.PLAYING:
-          ytPlayer.pauseVideo();
-          console.log('⏸ Pause');
-          break;
-        case YT.PlayerState.PAUSED:
-        case YT.PlayerState.ENDED:
-        case YT.PlayerState.CUED:
-        case YT.PlayerState.UNSTARTED:
-          ytPlayer.playVideo();
-          console.log('▶Wiedergabe');
-          break;
-        default:
-          console.log('ℹVideo ist nicht bereit oder unbekannter Status');
-      }
+      const state = ytPlayer?.getPlayerState?.();
+      if (state === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
+      else ytPlayer.playVideo();
       return;
     }
 
     if (!allowedCodes.includes(code)) return;
 
     if (event.shiftKey) {
-      if (ytPlayerReady && ytPlayer && ytPlayer.getCurrentTime) {
+      if (ytPlayerReady && ytPlayer?.getCurrentTime) {
         const time = ytPlayer.getCurrentTime();
         const videoId = ytPlayer.getVideoData().video_id;
         const url = `https://www.youtube.com/watch?v=${videoId}`;
-        bookmarks[code] = { time, url };
-        updateBookmarkUI(code, { time, url });
-        window.electronAPI.saveBookmark(code, url, time);
-        console.log(`Bookmark [${code}] gespeichert: ${formatTime(time)}`);
+        const title = ytPlayer.getVideoData().title || 'Unbekanntes Video';
+
+        bookmarks[code] = { time, url, title };
+        updateBookmarkUI(code, { time, url, title });
+        window.electronAPI.saveBookmark(code, url, title, time);
       }
     } else {
       const bookmark = bookmarks[code];
@@ -160,14 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
             onReady: () => {
               ytPlayerReady = true;
               ytPlayer.pauseVideo();
-              console.log(`Neuer Player: Video ${targetId} geladen bei ${formatTime(bookmark.time)}`);
             },
             onStateChange: (event) => {
               if (event.data === YT.PlayerState.PLAYING) {
-                setTimeout(() => {
-                  document.body.focus();
-                  console.log('🎬 Wiedergabe gestartet → Fokus zurück auf body');
-                }, 100);
+                setTimeout(() => document.body.focus(), 100);
               }
             }
           }
@@ -180,47 +176,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (targetId !== currentId) {
         ytPlayer.cueVideoById(targetId, bookmark.time);
-        console.log(`Pause + Lade neues Video ${targetId} bei ${formatTime(bookmark.time)}`);
       } else {
         ytPlayer.seekTo(bookmark.time, true);
-        console.log(`Springe zu ${formatTime(bookmark.time)}`);
       }
     }
   });
 
   function updateBookmarkUI(key, data) {
-    const time = data.time;
-    const url = data.url;
-    const formatted = formatTime(time);
-
+    const formatted = formatTime(data.time);
     const existing = document.getElementById(`bookmark-${key}`);
     if (existing) existing.remove();
 
     const p = document.createElement('p');
     p.id = `bookmark-${key}`;
-    p.textContent = `[${labelMap[key] || key}] ${formatted} — ${url}`;
     p.style.margin = '4px 0';
+    p.style.display = 'flex';
+    p.style.alignItems = 'center';
 
-    p.addEventListener('click', () => {
-      const currentId = extractYouTubeId(ytPlayer.getVideoUrl());
-      const targetId = extractYouTubeId(url);
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '❌';
+    deleteBtn.style.marginRight = '8px';
+    deleteBtn.style.cursor = 'pointer';
+    deleteBtn.style.background = 'transparent';
+    deleteBtn.style.color = 'red';
+    deleteBtn.style.border = 'none';
+    deleteBtn.style.fontSize = '14px';
 
-      if (ytPlayer && ytPlayer.seekTo) {
-        if (targetId !== currentId) {
-          ytPlayer.loadVideoById(targetId, time);
-          console.log(`Lade Video ${targetId} bei ${formatted}`);
-        } else {
-          ytPlayer.seekTo(time, true);
-          console.log(`Klick auf Bookmark [${key}] → ${formatted}`);
+    deleteBtn.addEventListener('click', () => {
+      delete bookmarks[key];
+      p.remove();
+      window.electronAPI.deleteBookmark(key);
+      console.log(`Bookmark [${key}] gelöscht`);
+      document.body.focus();
+
+      const remainingKeys = Object.keys(bookmarks).sort();
+      if (remainingKeys.length > 0) {
+        const nextKey = remainingKeys[0];
+        const nextBookmark = bookmarks[nextKey];
+        const targetId = extractYouTubeId(nextBookmark.url);
+        if (ytPlayer && ytPlayer.cueVideoById) {
+          ytPlayer.cueVideoById(targetId, nextBookmark.time);
         }
+      } else {
+        playerContainer.innerHTML = '';
+        ytPlayer = null;
+        ytPlayerReady = false;
       }
     });
 
+    const text = document.createElement('span');
+    text.textContent = `[${labelMap[key] || key}] ${formatted} — ${data.title || 'Unbekannt'}`;
+    text.addEventListener('click', () => {
+      const currentId = extractYouTubeId(ytPlayer.getVideoUrl());
+      const targetId = extractYouTubeId(data.url);
+      if (targetId !== currentId) {
+        ytPlayer.loadVideoById(targetId, data.time);
+      } else {
+        ytPlayer.seekTo(data.time, true);
+      }
+    });
+
+    p.appendChild(deleteBtn);
+    p.appendChild(text);
     linksContainer.appendChild(p);
   }
 });
 
-// Hilfsfunktionen
 function extractYouTubeId(url) {
   const regExp = /(?:v=|\/|vi=|be\/)([0-9A-Za-z_-]{11})/;
   const match = url.match(regExp);

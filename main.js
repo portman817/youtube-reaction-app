@@ -17,8 +17,8 @@ function createWindow() {
 }
 
 // Bookmark speichern
-ipcMain.on('save-bookmark', (event, { key, url, time }) => {
-  saveBookmark(key, url, time);
+ipcMain.on('save-bookmark', (event, { key, url, title, time }) => {
+  saveBookmark(key, url, title, time);
 });
 
 //Alle Bookmarks laden
@@ -31,6 +31,23 @@ ipcMain.on('clear-bookmarks', () => {
   const db = require('./backend/db');
   db.clearBookmarks(); // Aufruf der Methode aus backend/db.js
 });
+
+ipcMain.on('delete-bookmark', (event, key) => {
+  const db = require('./backend/db');
+  db.deleteBookmark(key);
+});
+
+ipcMain.on('save-notes', (event, text) => {
+  const db = require('./backend/db');
+  db.saveNotes(text);
+});
+
+ipcMain.handle('load-notes', () => {
+  const db = require('./backend/db');
+  return db.loadNotes();
+});
+
+
 
 app.whenReady().then(() => {
   createWindow();
