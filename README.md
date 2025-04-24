@@ -18,7 +18,7 @@ Lokale SQLite-Datenbank zur persistenten Speicherung
 
 ---------------------------------------------------
 
-Technologien
+Technologien:
 --
 Electron
 
@@ -26,7 +26,7 @@ SQLite (better-sqlite3)
 
 YouTube IFrame API
 
-Installation
+Installation:
 --
 Repository klonen:
 
