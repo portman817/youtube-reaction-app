@@ -19,6 +19,7 @@ Lokale SQLite-Datenbank zur persistenten Speicherung
 ---------------------------------------------------
 
 Technologien
+--
 Electron
 
 SQLite (better-sqlite3)
@@ -26,13 +27,14 @@ SQLite (better-sqlite3)
 YouTube IFrame API
 
 Installation
-------------
+--
 Repository klonen:
 
     git clone https://github.com/portman817/youtube-reaction-app.git
     cd youtube-reaction-app
 
 Abhängigkeiten installieren:
+--
     
     npm install
 
